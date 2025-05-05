@@ -1,0 +1,5 @@
+[2025-05-05T07:31:42.811Z] Artikel-ID 1: Das werkzeug wurde beschädigt!
+[2025-05-05T07:51:54.889Z] Artikel-ID 2: Der Spaten wurde von David kaputt gemacht
+[2025-05-05T07:54:58.703Z] Artikel-ID 1: David macht alles kaputt
+[2025-05-05T07:55:11.070Z] Artikel-ID 2: David hat ein Spaten kapuut gemacht
+[2025-05-05T07:56:11.575Z] Artikel-ID 2: Das
