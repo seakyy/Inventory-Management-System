@@ -38,6 +38,7 @@ A lightweight, locally hosted inventory system for managing tools, machines, and
 - npm
 
 ### Project Structure
+```
 lagerverwaltung/
 ├── frontend/          → React App
 │   ├── public/
@@ -50,7 +51,7 @@ lagerverwaltung/
     ├── src/
     │   └── index.ts
     └── package.json
-
+```
 
 ### Run Locally
 
