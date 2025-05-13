@@ -23,7 +23,7 @@ A lightweight, locally hosted inventory system for managing tools, machines, and
 |------------|------------------------|
 | Frontend   | React + TypeScript     |
 | Backend    | Express.js + TypeScript|
-| Database   | SQLite (planned)       |
+| Database   | MongoDB (planned), for now JSON      |
 | Hosting    | Raspberry Pi 5         |
 | Deployment | Caddy + PM2            |
 | Styling    | Custom CSS             |
