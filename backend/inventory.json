@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "name": "Schaufel",
+    "kategorie": "Werkzeug",
+    "bestand": 3,
+    "zustand": "Gut",
+    "status": "-"
+  },
+  {
+    "id": 2,
+    "name": "Spaten",
+    "kategorie": "Werkzeug",
+    "bestand": 5,
+    "zustand": "Okay",
+    "status": "-"
+  }
+]

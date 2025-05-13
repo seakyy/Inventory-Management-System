@@ -1,1 +1,5 @@
-node_modules/\ndist/\nbuild/\n*.log\n.env\n*.tsbuildinfo\n.DS_Store\nThumbs.db
+*.env
+.env.*
+node_modules/
+dist/
+log.txt

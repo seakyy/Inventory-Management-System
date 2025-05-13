@@ -16,97 +16,83 @@ type SortKey = keyof Artikel;
 function App() {
   const [artikelListe, setArtikelListe] = useState<Artikel[]>([]);
   const [ladeStatus, setLadeStatus] = useState('Lade...');
-  const [meldeName, setMeldeName] = useState('');
-  const [meldeText, setMeldeText] = useState('');
+  const [listenAnsicht, setListenAnsicht] = useState<'karte' | 'tabelle'>('karte');
+  const [kartenLayout, setKartenLayout] = useState<'vertikal' | 'horizontal'>('vertikal');
+  const [sortKey, setSortKey] = useState<SortKey>('id');
+  const [sortAsc, setSortAsc] = useState(true);
 
-
-  // Felder für neuen Artikel
   const [name, setName] = useState('');
   const [kategorie, setKategorie] = useState('');
   const [bestand, setBestand] = useState(0);
   const [zustand, setZustand] = useState('');
   const [status, setStatus] = useState('');
 
-  const [listenAnsicht, setListenAnsicht] = useState<'karte' | 'tabelle'>('karte');
-  const [kartenLayout, setKartenLayout] = useState<'vertikal' | 'horizontal'>('vertikal');
+  const [meldeName, setMeldeName] = useState('');
+  const [meldeText, setMeldeText] = useState('');
 
-  const [sortKey, setSortKey] = useState<SortKey>('id');
-  const [sortAsc, setSortAsc] = useState(true);
+  const [loggedIn, setLoggedIn] = useState<boolean>(!!localStorage.getItem('token'));
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<string | null>(localStorage.getItem('role'));
 
-  const exportCSV = () => {
-    const header = ['ID', 'Name', 'Kategorie', 'Bestand', 'Zustand', 'Status', 'Fehler'];
-    const rows = artikelListe.map(a => [
-      a.id,
-      a.name,
-      a.kategorie,
-      a.bestand,
-      a.zustand,
-      a.status,
-      a.fehler ?? ''
-    ]);
-
-    const csvContent = [
-      header.join(','),
-      ...rows.map(row => row.map(val => `"${val}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'lagerartikel.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const API = 'http://localhost:3000';
 
   const ladeArtikel = () => {
-    fetch('http://localhost:3000/api/artikel')
+    const token = localStorage.getItem('token');
+    fetch(`${API}/api/artikel`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((res) => res.json())
       .then((daten) => {
         setArtikelListe(daten);
         setLadeStatus('');
       })
-      .catch((err) => {
-        console.error(err);
+      .catch(() => {
         setLadeStatus('Fehler beim Laden der Artikelliste');
       });
   };
 
   useEffect(() => {
-    ladeArtikel();
-  }, []);
+    if (loggedIn) ladeArtikel();
+  }, [loggedIn]);
 
-  const defektMelden = () => {
-    const artikel = artikelListe.find((a) => a.name.toLowerCase() === meldeName.toLowerCase());
-    if (!artikel || !meldeText) return;
-
-    fetch('http://localhost:3000/api/meldung', {
+  const login = () => {
+    fetch(`${API}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: artikel.id, fehler: meldeText }),
-    });
+      body: JSON.stringify({ username, password }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('role', data.role);
+          localStorage.setItem('username', username);
+          setLoggedIn(true);
+          setRole(data.role);
+        } else {
+          alert('Login fehlgeschlagen');
+        }
+      });
+  };
 
-    setArtikelListe((prev) =>
-      prev.map((a) =>
-        a.id === artikel.id ? { ...a, fehler: meldeText } : a
-      )
-    );
-
-    setMeldeName('');
-    setMeldeText('');
+  const logout = () => {
+    localStorage.clear();
+    setLoggedIn(false);
+    setArtikelListe([]);
   };
 
   const artikelHinzufuegen = () => {
     if (!name || !kategorie || bestand < 0 || !zustand || !status) return;
 
-    fetch('http://localhost:3000/api/artikel', {
+    fetch(`${API}/api/artikel`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
       body: JSON.stringify({ name, kategorie, bestand, zustand, status }),
     })
-      .then((res) => res.json())
       .then(() => {
         ladeArtikel();
         setName('');
@@ -117,139 +103,155 @@ function App() {
       });
   };
 
+  const defektMelden = () => {
+    const artikel = artikelListe.find((a) => a.name.toLowerCase() === meldeName.toLowerCase());
+    if (!artikel || !meldeText) return;
+
+    const meldung = `${meldeText} ~${localStorage.getItem('username')}`;
+
+    fetch(`${API}/api/meldung`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ id: artikel.id, fehler: meldung }),
+    }).then(() => ladeArtikel());
+
+    setMeldeName('');
+    setMeldeText('');
+  };
+
+  const exportCSV = () => {
+    const header = ['ID', 'Name', 'Kategorie', 'Bestand', 'Zustand', 'Status', 'Fehler'];
+    const rows = artikelListe.map(a => [
+      a.id, a.name, a.kategorie, a.bestand, a.zustand, a.status, a.fehler ?? ''
+    ]);
+
+    const csvContent = [
+      header.join(','),
+      ...rows.map(row => row.map(val => `"${val}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'lagerartikel.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const sortierteArtikel = [...artikelListe].sort((a, b) => {
     const aVal = a[sortKey];
     const bVal = b[sortKey];
 
-    if (aVal === undefined || bVal === undefined) return 0;
-
     if (typeof aVal === 'number' && typeof bVal === 'number') {
       return sortAsc ? aVal - bVal : bVal - aVal;
     }
-
     return sortAsc
       ? String(aVal).localeCompare(String(bVal))
       : String(bVal).localeCompare(String(aVal));
   });
 
   const handleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      setSortAsc(!sortAsc);
-    } else {
+    if (key === sortKey) setSortAsc(!sortAsc);
+    else {
       setSortKey(key);
       setSortAsc(true);
     }
   };
 
+  if (!loggedIn) {
+    return (
+      <div className="login-form">
+        <h2>🔐 Login</h2>
+        <input placeholder="Benutzername" value={username} onChange={e => setUsername(e.target.value)} />
+        <input placeholder="Passwort" type="password" value={password} onChange={e => setPassword(e.target.value)} />
+        <button onClick={login}>Anmelden</button>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
       <header className="header">
         <h1>📦 Lagerverwaltung</h1>
-        <div className="melden-box">
-          <input
-            placeholder="Artikelname"
-            value={meldeName}
-            onChange={(e) => setMeldeName(e.target.value)}
-          />
-          <input
-            placeholder="Fehlerbeschreibung"
-            value={meldeText}
-            onChange={(e) => setMeldeText(e.target.value)}
-          />
-          <button className="melden-button" onClick={defektMelden}>
-            Melden
-          </button>
-        </div>
+        <button onClick={logout}>🚪 Logout</button>
       </header>
 
-      <h2>➕ Neuen Artikel hinzufügen</h2>
-      <div className="formular">
-        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input placeholder="Kategorie" value={kategorie} onChange={(e) => setKategorie(e.target.value)} />
-        <input
-          placeholder="Bestand"
-          type="number"
-          value={bestand}
-          onChange={(e) => setBestand(Number(e.target.value))}
-        />
-        <input placeholder="Zustand" value={zustand} onChange={(e) => setZustand(e.target.value)} />
-        <input placeholder="Status" value={status} onChange={(e) => setStatus(e.target.value)} />
-        <button className="hinzufuegen-button" onClick={artikelHinzufuegen}>
-          Artikel hinzufügen
-        </button>
-      </div>
+      {role === 'owner' && (
+        <>
+          <h2>➕ Artikel hinzufügen</h2>
+          <div className="formular">
+            <input placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
+            <input placeholder="Kategorie" value={kategorie} onChange={e => setKategorie(e.target.value)} />
+            <input type="number" placeholder="Bestand" value={bestand} onChange={e => setBestand(Number(e.target.value))} />
+            <input placeholder="Zustand" value={zustand} onChange={e => setZustand(e.target.value)} />
+            <input placeholder="Status" value={status} onChange={e => setStatus(e.target.value)} />
+            <button onClick={artikelHinzufuegen}>Artikel hinzufügen</button>
+          </div>
+        </>
+      )}
 
       <h2>📋 Artikelliste</h2>
-
       <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
         <button onClick={() => setListenAnsicht(listenAnsicht === 'karte' ? 'tabelle' : 'karte')}>
           Ansicht wechseln: {listenAnsicht === 'karte' ? '🗒️ Tabelle' : '📦 Karten'}
         </button>
-        {listenAnsicht === 'karte' && (
-          <>
-            <button onClick={() => setKartenLayout('vertikal')}>⬇️ Vertikal</button>
-            <button onClick={() => setKartenLayout('horizontal')}>➡️ Horizontal</button>
-            <button onClick={exportCSV}>📤 CSV exportieren</button>
-          </>
-        )}
+        {role === 'owner' && <button onClick={exportCSV}>📤 CSV exportieren</button>}
+        <button onClick={() => setKartenLayout('vertikal')}>⬇️ Vertikal</button>
+        <button onClick={() => setKartenLayout('horizontal')}>➡️ Horizontal</button>
       </div>
 
       {ladeStatus && <p>{ladeStatus}</p>}
 
-      {listenAnsicht === 'karte' ? (
-        <div className={`artikel-liste ${kartenLayout}`}>
-          {sortierteArtikel.map((artikel) => (
+      <div className={listenAnsicht === 'karte' ? `artikel-liste ${kartenLayout}` : ''}>
+        {listenAnsicht === 'karte' ? (
+          sortierteArtikel.map((artikel) => (
             <div key={artikel.id} className="artikel-card">
               <h3>{artikel.name} <span className="kategorie">({artikel.kategorie})</span></h3>
               <p>Bestand: {artikel.bestand}</p>
               <p>Zustand: {artikel.zustand}</p>
               <p>Status: {artikel.status}</p>
-              {artikel.fehler && (
-                <div className="fehler-hinweis">
-                  ⚠️ {artikel.fehler}
-                  <button
-                    className="entfernen-button"
-                    onClick={() => {
-                      setArtikelListe((prev) =>
-                        prev.map((a) =>
-                          a.id === artikel.id ? { ...a, fehler: undefined } : a
-                        )
-                      );
-                    }}
-                  >
-                    ❌
-                  </button>
-                </div>
-              )}
+              {artikel.fehler && <p className="fehler-hinweis">⚠️ {artikel.fehler}</p>}
             </div>
-          ))}
-        </div>
-      ) : (
-        <table className="artikel-tabelle">
-          <thead>
-            <tr>
-              {(['id', 'name', 'kategorie', 'bestand', 'zustand', 'status', 'fehler'] as SortKey[]).map((key) => (
-                <th key={key} onClick={() => handleSort(key)}>
-                  {key.toUpperCase()} {sortKey === key ? (sortAsc ? '▲' : '▼') : ''}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sortierteArtikel.map((artikel) => (
-              <tr key={artikel.id}>
-                <td>{artikel.id}</td>
-                <td>{artikel.name}</td>
-                <td>{artikel.kategorie}</td>
-                <td>{artikel.bestand}</td>
-                <td>{artikel.zustand}</td>
-                <td>{artikel.status}</td>
-                <td>{artikel.fehler ? `⚠️ ${artikel.fehler}` : ''}</td>
+          ))
+        ) : (
+          <table className="artikel-tabelle">
+            <thead>
+              <tr>
+                {(['id', 'name', 'kategorie', 'bestand', 'zustand', 'status', 'fehler'] as SortKey[]).map((key) => (
+                  <th key={key} onClick={() => handleSort(key)}>
+                    {key.toUpperCase()} {sortKey === key ? (sortAsc ? '▲' : '▼') : ''}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {sortierteArtikel.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.id}</td>
+                  <td>{a.name}</td>
+                  <td>{a.kategorie}</td>
+                  <td>{a.bestand}</td>
+                  <td>{a.zustand}</td>
+                  <td>{a.status}</td>
+                  <td>{a.fehler}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <h2>🛠️ Meldung erfassen</h2>
+      <div className="melden-box">
+        <input placeholder="Artikelname" value={meldeName} onChange={e => setMeldeName(e.target.value)} />
+        <input placeholder="Fehlerbeschreibung" value={meldeText} onChange={e => setMeldeText(e.target.value)} />
+        <button onClick={defektMelden}>Melden</button>
+      </div>
     </div>
   );
 }

@@ -1,86 +1,66 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import fs from 'fs';
+import dotenv from 'dotenv';
+import { Artikel, loadArtikel, saveArtikel } from './artikelStore';
+import { findUser } from './userStore';
+import { generateToken, verifyToken, requireRole } from './auth';
 
 const app = express();
+dotenv.config();
 app.use(cors());
 app.use(express.json());
 
-type Artikel = {
-    id: number;
-    name: string;
-    kategorie: string;
-    bestand: number;
-    zustand: string;
-    status: string;
-    fehler?: string;
-};
+let artikelListe = loadArtikel();
 
-const artikel: Artikel[] = [];
-
-const logMeldung = (id: number, fehler: string) => {
-    const timestamp = new Date().toISOString();
-    const logEintrag = `[${timestamp}] Artikel-ID ${id}: ${fehler}\n`;
-    fs.appendFileSync('log.txt', logEintrag);
-};
-
-app.get('/', (req: Request, res: Response) => {
-    res.send('Willkommen beim Lagerverwaltungs-Backend');
-});
-
-app.get('/api/health', (req: Request, res: Response) => {
-    res.send('Backend läuft!');
-});
-
-app.get('/api/artikel', (req: Request, res: Response) => {
-    res.json(artikel);
-});
-
-app.post('/api/artikel', (req: Request, res: Response): void => {
-    const { name, kategorie, bestand, zustand, status } = req.body;
-
-    // Eingaben prüfen
-    if (!name || !kategorie || bestand === undefined || !zustand || !status) {
-        res.status(400).json({ message: 'Fehlende oder ungültige Felder' });
+app.post('/api/login', (req: Request, res: Response): void => {
+    const { username, password } = req.body;
+    const user = findUser(username);
+    if (!user || user.password !== password) {
+        res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         return;
     }
 
-    // Neue ID bestimmen (einfacher Auto-Inkrement)
-    const neueId = artikel.length > 0 ? artikel[artikel.length - 1].id + 1 : 1;
+    const token = generateToken({ username: user.username, role: user.role });
+    res.json({ token, role: user.role });
+});
 
-    const neuerArtikel: Artikel = {
-        id: neueId,
-        name,
-        kategorie,
-        bestand,
-        zustand,
-        status,
-    };
+app.get('/api/artikel', verifyToken, (req: Request, res: Response): void => {
+    artikelListe = loadArtikel();
+    res.json(artikelListe);
+});
 
-    artikel.push(neuerArtikel);
+app.post('/api/artikel', verifyToken, requireRole('owner'), (req: Request, res: Response): void => {
+    const { name, kategorie, bestand, zustand, status } = req.body;
+
+    if (!name || !kategorie || bestand === undefined || !zustand || !status) {
+        res.status(400).json({ message: 'Fehlende Felder' });
+        return;
+    }
+
+    const neueId = artikelListe.length > 0 ? artikelListe[artikelListe.length - 1].id + 1 : 1;
+    const neuerArtikel: Artikel = { id: neueId, name, kategorie, bestand, zustand, status };
+
+    artikelListe.push(neuerArtikel);
+    saveArtikel(artikelListe);
 
     res.status(201).json({ message: 'Artikel hinzugefügt', artikel: neuerArtikel });
 });
 
+app.delete('/api/artikel/:id/fehler', verifyToken, requireRole('owner'), (req: Request, res: Response): void => {
+    const id = parseInt(req.params.id, 10);
+    const index = artikelListe.findIndex((a) => a.id === id);
 
-app.post('/api/meldung', (req: Request, res: Response): void => {
-    const { id, fehler } = req.body;
-
-    if (!id || !fehler) {
-        res.status(400).json({ message: 'Fehlende Daten' });
+    if (index === -1) {
+        res.status(404).json({ message: 'Artikel nicht gefunden' });
         return;
     }
 
-    logMeldung(id, fehler);
+    delete artikelListe[index].fehler;
+    saveArtikel(artikelListe);
 
-    const index = artikel.findIndex((a) => a.id === id);
-    if (index !== -1) {
-        artikel[index].fehler = fehler;
-    }
-
-    res.json({ message: 'Meldung protokolliert' });
+    res.json({ message: 'Fehler entfernt' });
 });
 
 app.listen(3000, () => {
-    console.log('✅ Server läuft auf http://localhost:3000');
+    console.log('✅ Backend läuft auf http://localhost:3000');
 });
