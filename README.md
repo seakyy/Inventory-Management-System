@@ -2,6 +2,10 @@
 
 A lightweight, locally hosted inventory system for managing tools, machines, and building materials — built for construction companies.
 
+There will be two versions released.
+First option: WebApp with JSON file saving
+Second option: WebApp with MongoDB
+
 ---
 
 ## Features
