@@ -6,11 +6,21 @@ dotenv.config();
 
 const SECRET = process.env.SECRET_KEY || 'fallback';
 
-export const generateToken = (payload: object) => {
+// Benutzerdefinierter Request-Typ mit user-Objekt
+export interface RequestWithUser extends Request {
+    user?: {
+        username: string;
+        role: string;
+    };
+}
+
+// Token generieren (1 Stunde gültig)
+export const generateToken = (payload: { username: string; role: string }) => {
     return jwt.sign(payload, SECRET, { expiresIn: '1h' });
 };
 
-export const verifyToken = (req: Request, res: Response, next: NextFunction): void => {
+// Middleware zur Token-Verifizierung + Benutzerdaten anhängen
+export const verifyToken = (req: RequestWithUser, res: Response, next: NextFunction): void => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         res.status(401).json({ message: 'Kein Token vorhanden' });
@@ -20,18 +30,18 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction): vo
     const token = authHeader.split(' ')[1];
 
     try {
-        const decoded = jwt.verify(token, SECRET);
-        (req as any).user = decoded;
+        const decoded = jwt.verify(token, SECRET) as { username: string; role: string };
+        req.user = decoded;
         next();
     } catch {
         res.status(403).json({ message: 'Ungültiger Token' });
     }
 };
 
+// Rollenprüfung
 export const requireRole = (role: string) => {
-    return (req: Request, res: Response, next: NextFunction): void => {
-        const user = (req as any).user;
-        if (user.role !== role) {
+    return (req: RequestWithUser, res: Response, next: NextFunction): void => {
+        if (!req.user || req.user.role !== role) {
             res.status(403).json({ message: 'Zugriff verweigert' });
             return;
         }

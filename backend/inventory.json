@@ -14,5 +14,13 @@
     "bestand": 5,
     "zustand": "Okay",
     "status": "-"
+  },
+  {
+    "id": 3,
+    "name": "Bohrmaschine",
+    "kategorie": "Maschinen",
+    "bestand": 4,
+    "zustand": "Gut",
+    "status": "1x Neu Bestellen"
   }
 ]
