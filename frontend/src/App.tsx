@@ -103,6 +103,31 @@ function App() {
       });
   };
 
+
+  const fehlerEntfernen = async (id: number) => {
+    const confirmed = window.confirm("Willst du die Meldung wirklich entfernen?");
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`${API}/api/artikel/${id}/fehler`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (res.ok) {
+        ladeArtikel(); // Liste neu laden
+      } else {
+        alert("Fehler konnte nicht gelöscht werden");
+      }
+    } catch (err) {
+      console.error("Fehler beim Löschen:", err);
+      alert("Verbindungsfehler");
+    }
+  };
+
+
   const defektMelden = () => {
     const artikel = artikelListe.find((a) => a.name.toLowerCase() === meldeName.toLowerCase());
     if (!artikel || !meldeText) return;
@@ -200,9 +225,13 @@ function App() {
         <button onClick={() => setListenAnsicht(listenAnsicht === 'karte' ? 'tabelle' : 'karte')}>
           Ansicht wechseln: {listenAnsicht === 'karte' ? '🗒️ Tabelle' : '📦 Karten'}
         </button>
-        {role === 'owner' && <button onClick={exportCSV}>📤 CSV exportieren</button>}
-        <button onClick={() => setKartenLayout('vertikal')}>⬇️ Vertikal</button>
-        <button onClick={() => setKartenLayout('horizontal')}>➡️ Horizontal</button>
+        {listenAnsicht === 'karte' && (
+          <>
+            <button onClick={() => setKartenLayout('vertikal')}>⬇️ Vertikal</button>
+            <button onClick={() => setKartenLayout('horizontal')}>➡️ Horizontal</button>
+          </>
+        )}
+        <button onClick={exportCSV}>📤 CSV exportieren</button>
       </div>
 
       {ladeStatus && <p>{ladeStatus}</p>}
@@ -215,7 +244,16 @@ function App() {
               <p>Bestand: {artikel.bestand}</p>
               <p>Zustand: {artikel.zustand}</p>
               <p>Status: {artikel.status}</p>
-              {artikel.fehler && <p className="fehler-hinweis">⚠️ {artikel.fehler}</p>}
+              {artikel.fehler && (
+                <div className="fehler-hinweis">
+                  ⚠️ {artikel.fehler}
+                  {role === 'owner' && (
+                    <button onClick={() => fehlerEntfernen(artikel.id)} style={{ marginLeft: '10px' }}>
+                      ❌ Fehler entfernen
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))
         ) : (
@@ -254,6 +292,7 @@ function App() {
       </div>
     </div>
   );
+
 }
 
 export default App;
