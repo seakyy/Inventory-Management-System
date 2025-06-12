@@ -86,6 +86,7 @@ function App() {
           localStorage.setItem('username', username);
           setLoggedIn(true);
           setRole(data.role);
+          ladeArtikel();
         } else {
           alert('Login fehlgeschlagen');
         }
