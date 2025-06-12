@@ -1,0 +1,44 @@
+name: Inventory-Management-System
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+    - name: Code auschecken
+      uses: actions/checkout@v3
+
+    - name: Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Backend installieren
+      working-directory: ./src/backend
+      run: npm ci
+
+    - name: Backend TypeScript Check
+      working-directory: ./src/backend
+      run: npx tsc --noEmit
+
+    - name: Frontend installieren
+      working-directory: ./src/frontend
+      run: npm ci
+
+    - name: Frontend TypeScript Check
+      working-directory: ./src/frontend
+      run: npx tsc --noEmit
+
+    - name: Fertig
+      run: echo "CI abgeschlossen"
