@@ -23,6 +23,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+        cache-dependency-path: src/backend/package-lock.json
 
     - name: Backend installieren
       working-directory: ./src/backend
@@ -31,6 +32,13 @@ jobs:
     - name: Backend TypeScript Check
       working-directory: ./src/backend
       run: npx tsc --noEmit
+
+    - name: Node.js ${{ matrix.node-version }} für Frontend
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: src/frontend/package-lock.json
 
     - name: Frontend installieren
       working-directory: ./src/frontend
