@@ -9,25 +9,29 @@ Second option: WebApp with MongoDB
 ---
 
 ## Showcase
-![grafik](https://github.com/user-attachments/assets/c4612593-742b-4b5d-802d-92f696ea9403)
+
+<img width="1285" height="615" alt="grafik" src="https://github.com/user-attachments/assets/0db8d783-9707-44ac-ba4a-cfe34ee2171a" />
 
 
 
 Admin View:
 
-![grafik](https://github.com/user-attachments/assets/0a21974a-2592-4238-996f-d900dd4c1e7e)
+<img width="1024" height="1246" alt="grafik" src="https://github.com/user-attachments/assets/a26b1325-1351-43c5-9fe2-fc3472d352a6" />
+
 
 
 
 Maintainer View:
 
-![grafik](https://github.com/user-attachments/assets/fd4daf76-c068-460d-988d-4e382072f18f)
+<img width="1020" height="972" alt="grafik" src="https://github.com/user-attachments/assets/e60e0e6f-89ce-44f5-af36-a79a7d3fc639" />
 
 
 
-Table View:
 
-![grafik](https://github.com/user-attachments/assets/ce23e362-23f9-4257-838f-77fc1ffd268b)
+Card View:
+
+<img width="927" height="1187" alt="grafik" src="https://github.com/user-attachments/assets/f32b7511-02fb-4fd7-802b-cb41bb228f97" />
+
 
 
 ---
